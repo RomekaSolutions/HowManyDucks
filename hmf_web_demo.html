@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HowManyFucks - Web Demo</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #ff6b6b;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #3a3a3a;
+            border-radius: 8px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 5px;
+            color: #ccc;
+            font-weight: bold;
+        }
+        
+        select, input, button {
+            padding: 8px;
+            border: 2px solid #555;
+            border-radius: 4px;
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            font-family: inherit;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+        
+        button {
+            background-color: #ff6b6b;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #ff5252;
+        }
+        
+        button:active {
+            background-color: #e53935;
+        }
+        
+        .grid-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .grid {
+            display: inline-block;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            padding: 15px;
+        }
+        
+        .grid-row {
+            margin: 2px 0;
+        }
+        
+        .grid-cell {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            line-height: 25px;
+            margin: 1px;
+            background-color: #4a4a4a;
+            border: 1px solid #666;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 3px;
+        }
+        
+        .grid-cell.highlighted {
+            background-color: #ff6b6b;
+            color: white;
+            box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+            border-color: #ff8a80;
+        }
+        
+        .game-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #3a3a3a;
+            border-radius: 8px;
+        }
+        
+        .guess-input {
+            font-size: 18px;
+            width: 100px;
+            text-align: center;
+            margin: 0 10px;
+        }
+        
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        
+        .result.correct {
+            color: #4caf50;
+        }
+        
+        .result.incorrect {
+            color: #ff5722;
+        }
+        
+        .match-list {
+            text-align: left;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .match-item {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #3a3a3a;
+            border-radius: 4px;
+        }
+        
+        .instructions {
+            background-color: #3a3a3a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            color: #ff6b6b;
+            margin-top: 0;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HowManyFucks</h1>
+        <div class="subtitle">Find hidden instances of "FUCK" in the grid</div>
+        
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <ul>
+                <li>Look at the grid of F, U, C, K letters</li>
+                <li>Count how many times "FUCK" appears in all 8 directions</li>
+                <li>Words can overlap and run backwards (KCUF counts too)</li>
+                <li>Enter your guess and click "Submit Guess"</li>
+                <li>Use "Reveal Matches" to see all hidden words highlighted</li>
+            </ul>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="gridSize">Grid Size:</label>
+                <select id="gridSize">
+                    <option value="8">8x8</option>
+                    <option value="10" selected>10x10</option>
+                    <option value="15">15x15</option>
+                    <option value="20">20x20</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="minCount">Min Count:</label>
+                <input type="number" id="minCount" value="0" min="0" max="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="maxCount">Max Count:</label>
+                <input type="number" id="maxCount" value="5" min="0" max="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="seedInput">Seed (optional):</label>
+                <input type="text" id="seedInput" placeholder="Enter seed...">
+            </div>
+            
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button onclick="generateNewPuzzle()">New Puzzle</button>
+            </div>
+            
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button onclick="generateDailyPuzzle()">Daily Puzzle</button>
+            </div>
+        </div>
+        
+        <div class="grid-container">
+            <div id="gameGrid" class="grid"></div>
+        </div>
+        
+        <div class="game-section">
+            <div>
+                <label for="guessInput">Your guess:</label>
+                <input type="number" id="guessInput" class="guess-input" min="0" max="50">
+                <button onclick="submitGuess()">Submit Guess</button>
+                <button onclick="revealMatches()">Reveal Matches</button>
+            </div>
+            
+            <div id="result" class="result"></div>
+            
+            <div id="matchList" class="match-list" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let currentPuzzle = null;
+        let revealed = false;
+
+        // Directions for word search
+        const DIRECTIONS = {
+            'N': [-1, 0], 'NE': [-1, 1], 'E': [0, 1], 'SE': [1, 1],
+            'S': [1, 0], 'SW': [1, -1], 'W': [0, -1], 'NW': [-1, -1]
+        };
+
+        const TARGET_WORD = "FUCK";
+        const LETTERS = ['F', 'U', 'C', 'K'];
+
+        // Simple hash function for string seeds
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        // Simple seedable random number generator
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+
+            next() {
+                this.seed = (this.seed * 16807) % 2147483647;
+                return (this.seed - 1) / 2147483646;
+            }
+
+            randInt(min, max) {
+                return Math.floor(this.next() * (max - min + 1)) + min;
+            }
+
+            choice(array) {
+                return array[this.randInt(0, array.length - 1)];
+            }
+        }
+
+        function generateGrid(size, minCount, maxCount, seed = null) {
+            const rng = seed ? new SeededRandom(hashString(seed.toString())) : new SeededRandom(Date.now());
+            
+            // Determine target count
+            const targetCount = rng.randInt(minCount, maxCount);
+            
+            // Create empty grid
+            const grid = Array(size).fill().map(() => Array(size).fill(null));
+            const matches = [];
+            
+            // Place target words
+            for (let i = 0; i < targetCount; i++) {
+                if (!placeWord(grid, size, rng, matches)) {
+                    break; // Failed to place word
+                }
+            }
+            
+            // Fill remaining cells
+            fillGrid(grid, size, rng);
+            
+            // Scan for actual count
+            const scanResult = scanGrid(grid);
+            
+            return {
+                grid: grid,
+                trueCount: scanResult.count,
+                matches: scanResult.matches,
+                targetCount: targetCount
+            };
+        }
+
+        function placeWord(grid, size, rng, matches) {
+            const maxAttempts = 1000;
+            const dirNames = Object.keys(DIRECTIONS);
+            
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const row = rng.randInt(0, size - 1);
+                const col = rng.randInt(0, size - 1);
+                const dirName = rng.choice(dirNames);
+                const [dr, dc] = DIRECTIONS[dirName];
+                
+                // Check bounds
+                const endRow = row + dr * (TARGET_WORD.length - 1);
+                const endCol = col + dc * (TARGET_WORD.length - 1);
+                
+                if (endRow < 0 || endRow >= size || endCol < 0 || endCol >= size) {
+                    continue;
+                }
+                
+                // Check if we can place the word
+                const cells = [];
+                let canPlace = true;
+                
+                for (let i = 0; i < TARGET_WORD.length; i++) {
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+                    cells.push([r, c]);
+                    
+                    if (grid[r][c] !== null && grid[r][c] !== TARGET_WORD[i]) {
+                        canPlace = false;
+                        break;
+                    }
+                }
+                
+                if (canPlace) {
+                    // Place the word
+                    for (let i = 0; i < TARGET_WORD.length; i++) {
+                        const r = row + dr * i;
+                        const c = col + dc * i;
+                        grid[r][c] = TARGET_WORD[i];
+                    }
+                    
+                    matches.push({
+                        start: [row, col],
+                        direction: dirName,
+                        cells: cells
+                    });
+                    
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        function fillGrid(grid, size, rng) {
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    if (grid[row][col] === null) {
+                        grid[row][col] = rng.choice(LETTERS);
+                    }
+                }
+            }
+        }
+
+        function scanGrid(grid) {
+            const size = grid.length;
+            const matches = [];
+            const foundMatches = new Set();
+
+            for (let row = 0; row < size; row++) {
+                for (let col = 0; col < size; col++) {
+                    for (const [dirName, [dr, dc]] of Object.entries(DIRECTIONS)) {
+                        const match = checkWordAtPosition(grid, row, col, dr, dc);
+                        if (match) {
+                            const matchKey = match.map(([r, c]) => `${r},${c}`).sort().join('|');
+                            if (!foundMatches.has(matchKey)) {
+                                foundMatches.add(matchKey);
+                                matches.push({
+                                    start: [row, col],
+                                    direction: dirName,
+                                    cells: match
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            return { count: matches.length, matches: matches };
+        }
+
+        function checkWordAtPosition(grid, startRow, startCol, dr, dc) {
+            const size = grid.length;
+            const cells = [];
+            let word = "";
+
+            for (let i = 0; i < TARGET_WORD.length; i++) {
+                const r = startRow + dr * i;
+                const c = startCol + dc * i;
+
+                if (r < 0 || r >= size || c < 0 || c >= size) {
+                    return null;
+                }
+
+                cells.push([r, c]);
+                word += grid[r][c];
+            }
+
+            return word === TARGET_WORD ? cells : null;
+        }
+
+        function renderGrid(grid, highlightedCells = new Set()) {
+            const gridElement = document.getElementById('gameGrid');
+            gridElement.innerHTML = '';
+
+            for (let row = 0; row < grid.length; row++) {
+                const rowElement = document.createElement('div');
+                rowElement.className = 'grid-row';
+
+                for (let col = 0; col < grid[row].length; col++) {
+                    const cellElement = document.createElement('span');
+                    cellElement.className = 'grid-cell';
+                    cellElement.textContent = grid[row][col];
+
+                    const cellKey = `${row},${col}`;
+                    if (highlightedCells.has(cellKey)) {
+                        cellElement.classList.add('highlighted');
+                    }
+
+                    rowElement.appendChild(cellElement);
+                }
+
+                gridElement.appendChild(rowElement);
+            }
+        }
+
+        function renderMatchList(matches) {
+            const matchListElement = document.getElementById('matchList');
+            
+            if (matches.length === 0) {
+                matchListElement.innerHTML = '<div>No matches found.</div>';
+                return;
+            }
+
+            let html = '<h4>Matches found:</h4>';
+            matches.forEach((match, index) => {
+                const [startRow, startCol] = match.start;
+                const cellsStr = match.cells.map(([r, c]) => `(${r+1},${c+1})`).join(',');
+                html += `<div class="match-item">#${index+1}: start=(row ${startRow+1}, col ${startCol+1}), dir=${match.direction}, cells=[${cellsStr}]</div>`;
+            });
+
+            matchListElement.innerHTML = html;
+        }
+
+        function generateNewPuzzle() {
+            const size = parseInt(document.getElementById('gridSize').value);
+            const minCount = parseInt(document.getElementById('minCount').value);
+            const maxCount = parseInt(document.getElementById('maxCount').value);
+            const seed = document.getElementById('seedInput').value || null;
+
+            currentPuzzle = generateGrid(size, minCount, maxCount, seed);
+            revealed = false;
+
+            renderGrid(currentPuzzle.grid);
+            
+            document.getElementById('result').textContent = '';
+            document.getElementById('matchList').style.display = 'none';
+            document.getElementById('guessInput').value = '';
+        }
+
+        function generateDailyPuzzle() {
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const dailySeed = `hmf-${today}`;
+            
+            document.getElementById('seedInput').value = dailySeed;
+            document.getElementById('gridSize').value = '10';
+            document.getElementById('minCount').value = '0';
+            document.getElementById('maxCount').value = '5';
+            
+            generateNewPuzzle();
+        }
+
+        function submitGuess() {
+            if (!currentPuzzle) {
+                alert('Generate a puzzle first!');
+                return;
+            }
+
+            const guess = parseInt(document.getElementById('guessInput').value);
+            if (isNaN(guess) || guess < 0) {
+                alert('Please enter a valid non-negative number.');
+                return;
+            }
+
+            const resultElement = document.getElementById('result');
+            const trueCount = currentPuzzle.trueCount;
+
+            if (guess === trueCount) {
+                resultElement.textContent = `Correct! There were ${trueCount} FUCK(s).`;
+                resultElement.className = 'result correct';
+            } else {
+                resultElement.textContent = `Not quite. The correct count is ${trueCount}.`;
+                resultElement.className = 'result incorrect';
+            }
+        }
+
+        function revealMatches() {
+            if (!currentPuzzle) {
+                alert('Generate a puzzle first!');
+                return;
+            }
+
+            if (revealed) return;
+
+            const highlightedCells = new Set();
+            currentPuzzle.matches.forEach(match => {
+                match.cells.forEach(([r, c]) => {
+                    highlightedCells.add(`${r},${c}`);
+                });
+            });
+
+            renderGrid(currentPuzzle.grid, highlightedCells);
+            renderMatchList(currentPuzzle.matches);
+
+            document.getElementById('matchList').style.display = 'block';
+            revealed = true;
+        }
+
+        // Initialize with a puzzle
+        window.addEventListener('load', () => {
+            generateNewPuzzle();
+        });
+
+        // Handle Enter key in guess input
+        document.getElementById('guessInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+    </script>
+</body>
+</html>
