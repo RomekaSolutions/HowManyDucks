@@ -122,6 +122,21 @@
             box-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
             border-color: #ff8a80;
         }
+
+        .grid-cell.selecting {
+            background-color: #ffd54f;
+            color: #000;
+        }
+
+        .grid-cell.correct {
+            background-color: #4caf50;
+            color: #fff;
+        }
+
+        .grid-cell.incorrect {
+            background-color: #f44336;
+            color: #fff;
+        }
         
         .game-section {
             text-align: center;
@@ -266,6 +281,11 @@
         // Game state
         let currentPuzzle = null;
         let revealed = false;
+
+        // Selection state for interactive highlighting
+        let selecting = false;
+        let selectionCells = [];
+        let selectionDir = null;
 
         // Directions for word search
         const DIRECTIONS = {
@@ -452,6 +472,7 @@
         function renderGrid(grid, highlightedCells = new Set()) {
             const gridElement = document.getElementById('gameGrid');
             gridElement.innerHTML = '';
+            gridElement.style.userSelect = 'none';
 
             for (let row = 0; row < grid.length; row++) {
                 const rowElement = document.createElement('div');
@@ -461,6 +482,10 @@
                     const cellElement = document.createElement('span');
                     cellElement.className = 'grid-cell';
                     cellElement.textContent = grid[row][col];
+                    cellElement.dataset.row = row;
+                    cellElement.dataset.col = col;
+                    cellElement.addEventListener('pointerdown', startSelection);
+                    cellElement.addEventListener('pointerenter', extendSelection);
 
                     const cellKey = `${row},${col}`;
                     if (highlightedCells.has(cellKey)) {
@@ -473,6 +498,66 @@
                 gridElement.appendChild(rowElement);
             }
         }
+
+        function startSelection(e) {
+            e.preventDefault();
+            selecting = true;
+            selectionCells = [e.target];
+            selectionDir = null;
+            e.target.classList.add('selecting');
+        }
+
+        function extendSelection(e) {
+            if (!selecting) return;
+            const cell = e.target;
+            if (!cell.classList.contains('grid-cell')) return;
+            if (selectionCells.includes(cell)) return;
+
+            const r = parseInt(cell.dataset.row);
+            const c = parseInt(cell.dataset.col);
+            const lastCell = selectionCells[selectionCells.length - 1];
+            const lr = parseInt(lastCell.dataset.row);
+            const lc = parseInt(lastCell.dataset.col);
+            const dr = r - lr;
+            const dc = c - lc;
+            if (Math.abs(dr) > 1 || Math.abs(dc) > 1) return;
+
+            if (selectionCells.length === 1) {
+                selectionDir = {dr, dc};
+            } else {
+                if (!selectionDir || dr !== selectionDir.dr || dc !== selectionDir.dc) return;
+            }
+
+            selectionCells.push(cell);
+            cell.classList.add('selecting');
+        }
+
+        function endSelection() {
+            if (!selecting) return;
+            selecting = false;
+            if (selectionCells.length === 0) return;
+
+            const letters = selectionCells.map(cell => cell.textContent).join('');
+            const reversed = letters.split('').reverse().join('');
+            const isCorrect = letters === TARGET_WORD || reversed === TARGET_WORD;
+            const finalClass = isCorrect ? 'correct' : 'incorrect';
+
+            selectionCells.forEach(cell => {
+                cell.classList.remove('selecting');
+                cell.classList.add(finalClass);
+            });
+
+            if (!isCorrect) {
+                setTimeout(() => {
+                    selectionCells.forEach(cell => cell.classList.remove('incorrect'));
+                }, 500);
+            }
+
+            selectionCells = [];
+            selectionDir = null;
+        }
+
+        document.addEventListener('pointerup', endSelection);
 
         function renderMatchList(matches) {
             const matchListElement = document.getElementById('matchList');
