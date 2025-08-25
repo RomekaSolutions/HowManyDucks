@@ -96,6 +96,11 @@
             border-radius: 8px;
             background-color: #2a2a2a;
             padding: 15px;
+            transition: background-color 0.3s;
+        }
+
+        .grid.flash {
+            background-color: #ff6b6b;
         }
         
         .grid-row {
@@ -233,6 +238,10 @@
             margin-top: 10px;
             display: none;
         }
+
+        .game-over-screen {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -295,12 +304,13 @@
         <div id="arcadeHud" class="arcade-hud" style="display:none;">
             <div id="arcadeLevel">Level 1</div>
             <div id="arcadeScore">Score: 0</div>
+            <div id="arcadeLives">Lives: ❤❤❤</div>
         </div>
 
         <div class="grid-container">
             <div id="arcadeTimer" class="arcade-timer"><div id="arcadeTimerInner" class="arcade-timer-inner"></div></div>
             <div id="gameGrid" class="grid"></div>
-            <button id="noFucksButton" class="big-button">No Fucks Given</button>
+            <button id="noFucksButton" class="big-button" style="display:none;">No Fucks Given</button>
         </div>
         
         <div class="game-section">
@@ -321,7 +331,21 @@
         // Game state
         let currentPuzzle = null;
         let revealed = false;
-        let arcadeState = { active: false, level: 1, score: 0, roundEndsAt: null, timer: null };
+        let arcadeState = {
+            active: false,
+            level: 1,
+            score: 0,
+            lives: 3,
+            roundEndsAt: null,
+            timer: null,
+            currentPuzzle: null
+        };
+
+        function updateArcadeHud() {
+            document.getElementById('arcadeLevel').textContent = `Level ${arcadeState.level}`;
+            document.getElementById('arcadeScore').textContent = `Score: ${arcadeState.score}`;
+            document.getElementById('arcadeLives').innerHTML = `Lives: ${'❤'.repeat(arcadeState.lives)}`;
+        }
 
         // Selection state for interactive highlighting
         let selecting = false;
@@ -596,6 +620,10 @@
 
             selectionCells = [];
             selectionDir = null;
+
+            if (arcadeState.active && arcadeState.roundEndsAt) {
+                endArcadeRound(isCorrect ? 'success' : 'fail');
+            }
         }
 
         document.addEventListener('pointerup', endSelection);
@@ -696,9 +724,11 @@
             arcadeState.active = true;
             arcadeState.level = 1;
             arcadeState.score = 0;
+            arcadeState.lives = 3;
+            arcadeState.roundEndsAt = null;
+            arcadeState.currentPuzzle = null;
 
-            document.getElementById('arcadeLevel').textContent = `Level ${arcadeState.level}`;
-            document.getElementById('arcadeScore').textContent = `Score: ${arcadeState.score}`;
+            updateArcadeHud();
 
             document.querySelector('.controls').style.display = 'none';
             document.querySelector('.game-section').style.display = 'none';
@@ -712,7 +742,106 @@
         }
 
         function startArcadeRound() {
-            // Placeholder for starting a new arcade round
+            if (!arcadeState.active) return;
+
+            const size = Math.min(4 + arcadeState.level - 1, 20);
+            const puzzle = generateGrid(size, 1, 1);
+            arcadeState.currentPuzzle = puzzle;
+            currentPuzzle = puzzle;
+            renderGrid(puzzle.grid);
+
+            const timeBudget = Math.max(7000, Math.min(6000 + 400 * size, 18000));
+            arcadeState.roundEndsAt = Date.now() + timeBudget;
+
+            const timerInner = document.getElementById('arcadeTimerInner');
+            timerInner.style.width = '100%';
+
+            if (arcadeState.timer) clearInterval(arcadeState.timer);
+            arcadeState.timer = setInterval(() => {
+                const remaining = arcadeState.roundEndsAt - Date.now();
+                const percent = Math.max(0, remaining / timeBudget * 100);
+                timerInner.style.width = percent + '%';
+                if (remaining <= 0) {
+                    clearInterval(arcadeState.timer);
+                    arcadeState.timer = null;
+                    endArcadeRound('timeout');
+                }
+            }, 100);
+
+            updateArcadeHud();
+        }
+
+        function endArcadeRound(reason) {
+            if (!arcadeState.roundEndsAt) return;
+
+            if (arcadeState.timer) {
+                clearInterval(arcadeState.timer);
+                arcadeState.timer = null;
+            }
+
+            const gridElement = document.getElementById('gameGrid');
+
+            if (reason === 'success') {
+                arcadeState.level += 1;
+                const remaining = arcadeState.roundEndsAt - Date.now();
+                arcadeState.score += Math.max(0, Math.floor(remaining / 1000));
+            } else if (reason === 'timeout' || reason === 'fail') {
+                arcadeState.lives -= 1;
+                gridElement.classList.add('flash');
+                setTimeout(() => gridElement.classList.remove('flash'), 300);
+                if (arcadeState.lives <= 0) {
+                    updateArcadeHud();
+                    arcadeState.roundEndsAt = null;
+                    gameOver();
+                    return;
+                } else {
+                    arcadeState.level += 1;
+                }
+            }
+
+            arcadeState.roundEndsAt = null;
+            updateArcadeHud();
+
+            setTimeout(() => {
+                if (arcadeState.active && arcadeState.lives > 0) {
+                    startArcadeRound();
+                }
+            }, 1000);
+        }
+
+        function gameOver() {
+            if (arcadeState.timer) {
+                clearInterval(arcadeState.timer);
+                arcadeState.timer = null;
+            }
+            arcadeState.active = false;
+
+            const gridElement = document.getElementById('gameGrid');
+            gridElement.innerHTML = `<div class="game-over-screen"><h2>Game Over</h2><p>Level reached: ${arcadeState.level}</p><p>Score: ${arcadeState.score}</p><button id="playAgainButton">Play Again</button></div>`;
+
+            document.getElementById('arcadeHud').style.display = 'none';
+            document.getElementById('arcadeTimer').style.display = 'none';
+            document.getElementById('noFucksButton').style.display = 'none';
+
+            document.getElementById('playAgainButton').addEventListener('click', () => {
+                arcadeState.active = false;
+                arcadeState.level = 1;
+                arcadeState.score = 0;
+                arcadeState.lives = 3;
+                arcadeState.roundEndsAt = null;
+                arcadeState.timer = null;
+                arcadeState.currentPuzzle = null;
+
+                document.getElementById('arcadeHud').style.display = 'none';
+                document.getElementById('arcadeTimer').style.display = 'none';
+                document.getElementById('noFucksButton').style.display = 'none';
+
+                document.querySelector('.controls').style.display = 'grid';
+                document.querySelector('.game-section').style.display = 'block';
+                document.querySelector('.instructions').style.display = 'block';
+
+                generateNewPuzzle();
+            });
         }
 
         // Initialize with a puzzle
@@ -724,6 +853,12 @@
         document.getElementById('guessInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 submitGuess();
+            }
+        });
+
+        document.getElementById('noFucksButton').addEventListener('click', () => {
+            if (arcadeState.active && arcadeState.roundEndsAt) {
+                endArcadeRound('fail');
             }
         });
     </script>
