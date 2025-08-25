@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HowManyFucks - Web Demo</title>
     <style>
+        :root {
+            --cell-size: 25px;
+        }
+
         html, body {
             overscroll-behavior: none;
         }
@@ -66,6 +70,27 @@
             background-color: #4a4a4a;
             color: #e0e0e0;
             font-family: inherit;
+            touch-action: manipulation;
+        }
+
+        .controls select,
+        .controls input,
+        .controls button {
+            font-size: 16px;
+            min-height: 44px;
+        }
+
+        .btn-large {
+            font-size: 18px;
+            min-height: 44px;
+            padding: 10px 20px;
+        }
+
+        @media (max-width: 480px) {
+            .btn-large {
+                width: 100%;
+                display: block;
+            }
         }
         
         select:focus, input:focus {
@@ -115,15 +140,15 @@
         
         .grid-cell {
             display: inline-block;
-            width: 25px;
-            height: 25px;
-            line-height: 25px;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            line-height: var(--cell-size);
             margin: 1px;
             background-color: #4a4a4a;
             border: 1px solid #666;
             text-align: center;
             font-weight: bold;
-            font-size: 14px;
+            font-size: var(--cell-size);
             border-radius: 3px;
             touch-action: none;
         }
@@ -283,7 +308,9 @@
                 <li>There may be something else to look for, who knows?</li>
             </ul>
         </div>
-        
+
+        <button id="toggleControls" class="btn-large">Hide Controls</button>
+
         <div class="controls">
             <div class="control-group">
                 <label for="gridSize">Grid Size:</label>
@@ -312,16 +339,16 @@
             
             <div class="control-group">
                 <label>&nbsp;</label>
-                <button onclick="generateNewPuzzle()">New Puzzle</button>
+                <button class="btn-large" onclick="generateNewPuzzle()">New Puzzle</button>
             </div>
             
             <div class="control-group">
                 <label>&nbsp;</label>
-                <button onclick="generateDailyPuzzle()">Daily Puzzle</button>
+                <button class="btn-large" onclick="generateDailyPuzzle()">Daily Puzzle</button>
             </div>
             <div class="control-group">
                 <label>&nbsp;</label>
-                <button onclick="startArcadeMode()">Arcade Mode</button>
+                <button class="btn-large" onclick="startArcadeMode()">Arcade Mode</button>
             </div>
         </div>
 
@@ -341,8 +368,8 @@
             <div>
                 <label for="guessInput">Your guess:</label>
                 <input type="number" id="guessInput" class="guess-input" min="0" max="50">
-                <button onclick="submitGuess()">Submit Guess</button>
-                <button onclick="revealMatches()">Reveal Matches</button>
+                <button class="btn-large" onclick="submitGuess()">Submit Guess</button>
+                <button class="btn-large" onclick="revealMatches()">Reveal Matches</button>
             </div>
             
             <div id="result" class="result"></div>
@@ -586,6 +613,11 @@
 
                 gridElement.appendChild(rowElement);
             }
+
+            const vw = Math.min(window.innerWidth, 800) * 0.92;
+            const size = grid.length;
+            const cell = Math.max(24, Math.floor(vw / (size + 2)));
+            document.documentElement.style.setProperty('--cell-size', cell + 'px');
         }
 
         function onGridPointerDown(e) {
@@ -826,7 +858,7 @@
 
             updateArcadeHud();
 
-            document.querySelector('.controls').style.display = 'none';
+            setControlsVisibility(false);
             document.querySelector('.game-section').style.display = 'none';
             document.getElementById('basicInstructions').style.display = 'none';
             document.getElementById('arcadeInstructions').style.display = 'block';
@@ -940,7 +972,7 @@
             document.getElementById('noFucksButton').style.display = 'none';
             document.getElementById('arcadeInstructions').style.display = 'none';
 
-            document.getElementById('playAgainButton').addEventListener('click', () => {
+        document.getElementById('playAgainButton').addEventListener('click', () => {
                 arcadeState.active = false;
                 arcadeState.level = 1;
                 arcadeState.score = 0;
@@ -953,7 +985,7 @@
                 document.getElementById('arcadeTimer').style.display = 'none';
                 document.getElementById('noFucksButton').style.display = 'none';
 
-                document.querySelector('.controls').style.display = 'grid';
+                setControlsVisibility(window.innerWidth >= 600);
                 document.querySelector('.game-section').style.display = 'block';
                 document.getElementById('arcadeInstructions').style.display = 'none';
                 document.getElementById('basicInstructions').style.display = 'block';
@@ -962,8 +994,30 @@
             });
         }
 
+        const controlsElement = document.querySelector('.controls');
+        const toggleControlsButton = document.getElementById('toggleControls');
+
+        function setControlsVisibility(show) {
+            controlsElement.style.display = show ? 'grid' : 'none';
+            toggleControlsButton.textContent = show ? 'Hide Controls' : 'Show Controls';
+        }
+
+        function initControlsToggle() {
+            setControlsVisibility(window.innerWidth >= 600);
+        }
+
+        toggleControlsButton.addEventListener('click', () => {
+            const isHidden = controlsElement.style.display === 'none' || controlsElement.style.display === '';
+            setControlsVisibility(isHidden);
+        });
+
+        window.addEventListener('resize', () => {
+            setControlsVisibility(window.innerWidth >= 600);
+        });
+
         // Initialize with a puzzle
         window.addEventListener('load', () => {
+            initControlsToggle();
             generateNewPuzzle();
         });
 
