@@ -297,6 +297,7 @@
                 <li>Look at the grid of F, U, C, K letters</li>
                 <li>Count how many times "FUCK" appears in all 8 directions</li>
                 <li>Words can overlap and run backwards (KCUF counts too)</li>
+                <li>Drag across letters to mark words. Correct picks stay green; mistakes flash red.</li>
                 <li>Enter your guess and click "Submit Guess"</li>
                 <li>Use "Reveal Matches" to see all hidden words highlighted</li>
             </ul>
@@ -714,7 +715,9 @@
                     cell.classList.remove('selecting');
                     cell.classList.add('correct');
                 });
-                endArcadeRound('success');
+                if (arcadeState.active) {
+                    endArcadeRound('success');
+                }
             } else {
                 selectionCells.forEach(cell => cell.classList.add('incorrect'));
                 setTimeout(() => {
@@ -742,8 +745,8 @@
         gameGrid.addEventListener('pointercancel', onGridPointerCancel, { passive: false });
         window.addEventListener('pointerup', onGridPointerUp, { passive: false });
         window.addEventListener('pointercancel', onGridPointerCancel, { passive: false });
-        gameGrid.addEventListener('touchmove', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
-        gameGrid.addEventListener('wheel', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
+        gameGrid.addEventListener('touchmove', (e) => { if (selecting) e.preventDefault(); }, {passive: false});
+        gameGrid.addEventListener('wheel', (e) => { if (selecting) e.preventDefault(); }, {passive: false});
 
         function renderMatchList(matches) {
             const matchListElement = document.getElementById('matchList');
@@ -764,6 +767,7 @@
         }
 
         function generateNewPuzzle() {
+            cleanupSelectionState();
             const size = parseInt(document.getElementById('gridSize').value);
             const minCount = parseInt(document.getElementById('minCount').value);
             const maxCount = parseInt(document.getElementById('maxCount').value);
