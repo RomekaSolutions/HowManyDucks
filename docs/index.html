@@ -790,9 +790,9 @@
             revealed = true;
         }
 
-        function flashTrueMatch(ms=800) {
+        function flashTrueMatch(ms = 850) {
             const p = arcadeState?.currentPuzzle;
-            if (!p?.matches?.length) return;
+            if (!p?.matches?.length) return Promise.resolve();
             const cells = p.matches[0].cells || [];
             const els = [];
             cells.forEach(([r, c]) => {
@@ -802,7 +802,12 @@
                     els.push(el);
                 }
             });
-            setTimeout(() => els.forEach(el => el.classList.remove('reveal')), ms);
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    els.forEach(el => el.classList.remove('reveal'));
+                    resolve();
+                }, ms);
+            });
         }
 
         function startArcadeMode() {
@@ -865,7 +870,6 @@
 
         function endArcadeRound(reason) {
             inputLocked = true;
-            cleanupSelectionState();
             if (!arcadeState.roundEndsAt) return;
 
             if (arcadeState.timer) {
@@ -876,32 +880,43 @@
             const gridElement = document.getElementById('gameGrid');
 
             if (reason === 'success') {
+                cleanupSelectionState();
                 arcadeState.level += 1;
                 const remaining = arcadeState.roundEndsAt - Date.now();
                 arcadeState.score += Math.max(0, Math.floor(remaining / 1000));
-            } else if (reason === 'timeout' || reason === 'fail') {
-                arcadeState.lives -= 1;
-                flashTrueMatch();
-                gridElement.classList.add('flash');
-                setTimeout(() => gridElement.classList.remove('flash'), 300);
-                if (arcadeState.lives <= 0) {
-                    updateArcadeHud();
-                    arcadeState.roundEndsAt = null;
-                    setTimeout(() => gameOver(), 800);
-                    return;
-                } else {
-                    arcadeState.level += 1;
-                }
+                arcadeState.roundEndsAt = null;
+                updateArcadeHud();
+                setTimeout(() => {
+                    if (arcadeState.active && arcadeState.lives > 0) {
+                        startArcadeRound();
+                    }
+                }, 200);
+                return;
             }
 
-            arcadeState.roundEndsAt = null;
-            updateArcadeHud();
-
-            setTimeout(() => {
-                if (arcadeState.active && arcadeState.lives > 0) {
-                    startArcadeRound();
-                }
-            }, 1000);
+            flashTrueMatch().then(() => {
+                cleanupSelectionState();
+                gridElement.classList.add('flash');
+                setTimeout(() => {
+                    gridElement.classList.remove('flash');
+                    arcadeState.lives -= 1;
+                    if (arcadeState.lives <= 0) {
+                        updateArcadeHud();
+                        arcadeState.roundEndsAt = null;
+                        setTimeout(() => gameOver(), 300);
+                        return;
+                    } else {
+                        arcadeState.level += 1;
+                    }
+                    arcadeState.roundEndsAt = null;
+                    updateArcadeHud();
+                    setTimeout(() => {
+                        if (arcadeState.active && arcadeState.lives > 0) {
+                            startArcadeRound();
+                        }
+                    }, 300);
+                }, 200);
+            });
         }
 
         function gameOver() {
