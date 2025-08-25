@@ -217,6 +217,7 @@
                 <li>Look at the grid of F, U, C, K letters</li>
                 <li>Count how many times "FUCK" appears in all 8 directions</li>
                 <li>Words can overlap and run backwards (KCUF counts too)</li>
+                <li>Drag across letters to mark words. Correct picks stay green; mistakes flash red.</li>
                 <li>Enter your guess and click "Submit Guess"</li>
                 <li>Use "Reveal Matches" to see all hidden words highlighted</li>
             </ul>
@@ -578,6 +579,9 @@
         }
 
         function generateNewPuzzle() {
+            selecting = false;
+            selectionDir = null;
+            selectionCells = [];
             const size = parseInt(document.getElementById('gridSize').value);
             const minCount = parseInt(document.getElementById('minCount').value);
             const maxCount = parseInt(document.getElementById('maxCount').value);
