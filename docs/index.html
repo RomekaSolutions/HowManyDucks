@@ -262,7 +262,7 @@
         <h1>HowManyFucks</h1>
         <div class="subtitle">Find hidden instances of "FUCK" in the grid</div>
         
-        <div class="instructions">
+        <div id="basicInstructions" class="instructions">
             <h3>How to Play</h3>
             <ul>
                 <li>Look at the grid of F, U, C, K letters</li>
@@ -271,6 +271,15 @@
                 <li>Enter your guess and click "Submit Guess"</li>
                 <li>Use "Reveal Matches" to see all hidden words highlighted</li>
             </ul>
+        </div>
+
+        <div id="arcadeInstructions" class="instructions" style="display: none;">
+            <h3>Arcade Mode: The Hunt for the One True FUCK</h3>
+            <p>A single fuck is given… unless it isn’t.</p>
+            <p>Spot it quick to rise through the levels.</p>
+            <p>Think there are none? Smash "No Fucks Given."</p>
+            <p>Three lives only. Out of fucks, out of luck.</p>
+            <p>There maybe something else to look for, who knows?</p>
         </div>
         
         <div class="controls">
@@ -806,7 +815,8 @@
 
             document.querySelector('.controls').style.display = 'none';
             document.querySelector('.game-section').style.display = 'none';
-            document.querySelector('.instructions').style.display = 'none';
+            document.getElementById('basicInstructions').style.display = 'none';
+            document.getElementById('arcadeInstructions').style.display = 'block';
 
             document.getElementById('arcadeHud').style.display = 'block';
             document.getElementById('arcadeTimer').style.display = 'block';
@@ -905,6 +915,7 @@
             document.getElementById('arcadeHud').style.display = 'none';
             document.getElementById('arcadeTimer').style.display = 'none';
             document.getElementById('noFucksButton').style.display = 'none';
+            document.getElementById('arcadeInstructions').style.display = 'none';
 
             document.getElementById('playAgainButton').addEventListener('click', () => {
                 arcadeState.active = false;
@@ -921,7 +932,8 @@
 
                 document.querySelector('.controls').style.display = 'grid';
                 document.querySelector('.game-section').style.display = 'block';
-                document.querySelector('.instructions').style.display = 'block';
+                document.getElementById('arcadeInstructions').style.display = 'none';
+                document.getElementById('basicInstructions').style.display = 'block';
 
                 generateNewPuzzle();
             });
