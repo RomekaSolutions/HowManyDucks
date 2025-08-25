@@ -790,23 +790,29 @@
             revealed = true;
         }
 
-        function flashTrueMatch(ms = 850) {
+        function flashTrueMatch(ms = 900) {
             const p = arcadeState?.currentPuzzle;
             if (!p?.matches?.length) return Promise.resolve();
             const cells = p.matches[0].cells || [];
             const els = [];
+            const grid = document.getElementById('gameGrid');
             cells.forEach(([r, c]) => {
-                const el = document.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+                const el = grid.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                 if (el) {
                     el.classList.add('reveal');
                     els.push(el);
                 }
             });
+            console.log('flashTrueMatch found:', els.length);
             return new Promise(resolve => {
-                setTimeout(() => {
-                    els.forEach(el => el.classList.remove('reveal'));
-                    resolve();
-                }, ms);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            els.forEach(el => el.classList.remove('reveal'));
+                            resolve();
+                        }, ms);
+                    });
+                });
             });
         }
 
@@ -845,6 +851,7 @@
             const puzzle = generateGrid(size, 1, 1);
             arcadeState.currentPuzzle = puzzle;
             currentPuzzle = puzzle;
+            console.log('matches:', arcadeState.currentPuzzle?.matches?.length);
             renderGrid(puzzle.grid);
 
             const timeBudget = Math.max(7000, Math.min(6000 + 400 * size, 18000));
@@ -868,7 +875,7 @@
             updateArcadeHud();
         }
 
-        function endArcadeRound(reason) {
+        async function endArcadeRound(reason) {
             inputLocked = true;
             if (!arcadeState.roundEndsAt) return;
 
@@ -894,29 +901,28 @@
                 return;
             }
 
-            flashTrueMatch().then(() => {
-                cleanupSelectionState();
-                gridElement.classList.add('flash');
-                setTimeout(() => {
-                    gridElement.classList.remove('flash');
-                    arcadeState.lives -= 1;
-                    if (arcadeState.lives <= 0) {
-                        updateArcadeHud();
-                        arcadeState.roundEndsAt = null;
-                        setTimeout(() => gameOver(), 300);
-                        return;
-                    } else {
-                        arcadeState.level += 1;
-                    }
-                    arcadeState.roundEndsAt = null;
+            await flashTrueMatch();
+            cleanupSelectionState();
+            gridElement.classList.add('flash');
+            setTimeout(() => {
+                gridElement.classList.remove('flash');
+                arcadeState.lives -= 1;
+                if (arcadeState.lives <= 0) {
                     updateArcadeHud();
-                    setTimeout(() => {
-                        if (arcadeState.active && arcadeState.lives > 0) {
-                            startArcadeRound();
-                        }
-                    }, 300);
-                }, 200);
-            });
+                    arcadeState.roundEndsAt = null;
+                    setTimeout(() => gameOver(), 300);
+                    return;
+                } else {
+                    arcadeState.level += 1;
+                }
+                arcadeState.roundEndsAt = null;
+                updateArcadeHud();
+                setTimeout(() => {
+                    if (arcadeState.active && arcadeState.lives > 0) {
+                        startArcadeRound();
+                    }
+                }, 300);
+            }, 200);
         }
 
         function gameOver() {
