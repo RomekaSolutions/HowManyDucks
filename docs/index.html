@@ -117,16 +117,20 @@
         .grid-container {
             text-align: center;
             margin: 30px 0;
+            max-width: 100%;
+            overflow: hidden;
         }
-        
+
         .grid {
             display: inline-block;
             border: 2px solid #555;
             border-radius: 8px;
             background-color: #2a2a2a;
-            padding: 15px;
+            padding: min(2.5vw, 15px);
             transition: background-color 0.3s;
             touch-action: none;
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .grid.flash {
@@ -148,7 +152,7 @@
             border: 1px solid #666;
             text-align: center;
             font-weight: bold;
-            font-size: var(--cell-size);
+            font-size: calc(var(--cell-size) * 0.72);
             border-radius: 3px;
             touch-action: none;
         }
@@ -398,6 +402,20 @@
             document.getElementById('arcadeLives').innerHTML = `Lives: ${'❤'.repeat(arcadeState.lives)}`;
         }
 
+        function setCellSize(size){
+            const container = document.querySelector('.grid-container');
+            const cw = container ? container.clientWidth : window.innerWidth;
+            const availW = cw - 16;                   // padding/borders cushion
+            const byWidth = Math.floor(availW / (size + 2));  // +2 for margins
+            // Try to keep the grid visible vertically too (timer/HUD/buttons take space)
+            const hudReserve = arcadeState.active ? 220 : 160; // px
+            const availH = window.innerHeight - hudReserve;
+            const byHeight = Math.floor(availH / (size + 2));
+            let cell = Math.min(byWidth, byHeight);
+            cell = Math.max(22, Math.min(cell, 64));  // clamp
+            document.documentElement.style.setProperty('--cell-size', cell + 'px');
+        }
+
         // Selection state for interactive highlighting
         let selecting = false;
         let selectionCells = [];
@@ -614,10 +632,7 @@
                 gridElement.appendChild(rowElement);
             }
 
-            const vw = Math.min(window.innerWidth, 800) * 0.92;
-            const size = grid.length;
-            const cell = Math.max(24, Math.floor(vw / (size + 2)));
-            document.documentElement.style.setProperty('--cell-size', cell + 'px');
+            setCellSize(grid.length);
         }
 
         function onGridPointerDown(e) {
@@ -758,6 +773,7 @@
             revealed = false;
 
             renderGrid(currentPuzzle.grid);
+            setCellSize(currentPuzzle.grid.length);
             
             document.getElementById('result').textContent = '';
             document.getElementById('matchList').style.display = 'none';
@@ -885,6 +901,7 @@
             currentPuzzle = puzzle;
             console.log('matches:', arcadeState.currentPuzzle?.matches?.length);
             renderGrid(puzzle.grid);
+            setCellSize(arcadeState.currentPuzzle.grid.length);
 
             const timeBudget = Math.max(7000, Math.min(6000 + 400 * size, 18000));
             arcadeState.roundEndsAt = Date.now() + timeBudget;
@@ -1013,6 +1030,12 @@
 
         window.addEventListener('resize', () => {
             setControlsVisibility(window.innerWidth >= 600);
+            const g = arcadeState?.currentPuzzle?.grid || currentPuzzle?.grid;
+            if (g) setCellSize(g.length);
+        });
+        window.addEventListener('orientationchange', () => {
+            const g = arcadeState?.currentPuzzle?.grid || currentPuzzle?.grid;
+            if (g) setCellSize(g.length);
         });
 
         // Initialize with a puzzle
