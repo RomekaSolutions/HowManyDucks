@@ -149,6 +149,12 @@
             background-color: #f44336;
             color: #fff;
         }
+
+        .grid-cell.reveal {
+            background: #e53935 !important;
+            color: #fff !important;
+            box-shadow: 0 0 8px rgba(229,57,53,0.9);
+        }
         
         .game-section {
             text-align: center;
@@ -773,6 +779,21 @@
             revealed = true;
         }
 
+        function flashTrueMatch(ms=800) {
+            const p = arcadeState?.currentPuzzle;
+            if (!p?.matches?.length) return;
+            const cells = p.matches[0].cells || [];
+            const els = [];
+            cells.forEach(([r, c]) => {
+                const el = document.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+                if (el) {
+                    el.classList.add('reveal');
+                    els.push(el);
+                }
+            });
+            setTimeout(() => els.forEach(el => el.classList.remove('reveal')), ms);
+        }
+
         function startArcadeMode() {
             arcadeState.active = true;
             arcadeState.level = 1;
@@ -848,12 +869,13 @@
                 arcadeState.score += Math.max(0, Math.floor(remaining / 1000));
             } else if (reason === 'timeout' || reason === 'fail') {
                 arcadeState.lives -= 1;
+                flashTrueMatch();
                 gridElement.classList.add('flash');
                 setTimeout(() => gridElement.classList.remove('flash'), 300);
                 if (arcadeState.lives <= 0) {
                     updateArcadeHud();
                     arcadeState.roundEndsAt = null;
-                    gameOver();
+                    setTimeout(() => gameOver(), 800);
                     return;
                 } else {
                     arcadeState.level += 1;
@@ -919,7 +941,11 @@
 
         document.getElementById('noFucksButton').addEventListener('click', () => {
             if (arcadeState.active && arcadeState.roundEndsAt) {
-                endArcadeRound('fail');
+                if (arcadeState.currentPuzzle?.matches?.length) {
+                    endArcadeRound('fail');
+                } else {
+                    endArcadeRound('success');
+                }
             }
         });
     </script>
