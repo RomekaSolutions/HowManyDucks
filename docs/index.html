@@ -359,6 +359,7 @@
         let selectionCells = [];
         let selectionDir = null;
         let activePointerId = null;
+        let inputLocked = false;
 
         // Directions for word search
         const DIRECTIONS = {
@@ -557,7 +558,6 @@
                     cellElement.textContent = grid[row][col];
                     cellElement.dataset.row = row;
                     cellElement.dataset.col = col;
-                    cellElement.addEventListener('pointerdown', startSelection, {passive: false});
 
                     const cellKey = `${row},${col}`;
                     if (highlightedCells.has(cellKey)) {
@@ -571,27 +571,26 @@
             }
         }
 
-        function startSelection(e) {
+        function onGridPointerDown(e) {
+            if (inputLocked) return;
+            if (!e.target.classList.contains('grid-cell')) return;
             e.preventDefault();
             selecting = true;
+            activePointerId = e.pointerId;
             selectionCells = [e.target];
             selectionDir = null;
-            activePointerId = e.pointerId;
-            const gridElement = document.getElementById('gameGrid');
-            gridElement.setPointerCapture(activePointerId);
+            e.currentTarget.setPointerCapture(activePointerId);
             e.target.classList.add('selecting');
         }
 
-        function handlePointerMove(e) {
+        function onGridPointerMove(e) {
             if (!selecting || e.pointerId !== activePointerId) return;
             e.preventDefault();
-            const elem = document.elementFromPoint(e.clientX, e.clientY);
-            if (!elem || !elem.classList || !elem.classList.contains('grid-cell')) return;
-            if (selectionCells.includes(elem)) return;
-            if (selectionCells.length >= 4) return;
-
-            const r = parseInt(elem.dataset.row);
-            const c = parseInt(elem.dataset.col);
+            const el = document.elementFromPoint(e.clientX, e.clientY);
+            if (!el || !el.classList || !el.classList.contains('grid-cell')) return;
+            if (selectionCells.includes(el)) return;
+            const r = parseInt(el.dataset.row);
+            const c = parseInt(el.dataset.col);
             const lastCell = selectionCells[selectionCells.length - 1];
             const lr = parseInt(lastCell.dataset.row);
             const lc = parseInt(lastCell.dataset.col);
@@ -600,26 +599,45 @@
             if (Math.abs(dr) > 1 || Math.abs(dc) > 1) return;
 
             if (selectionCells.length === 1) {
-                selectionDir = {dr, dc};
+                selectionDir = { dr, dc };
             } else {
                 if (!selectionDir || dr !== selectionDir.dr || dc !== selectionDir.dc) return;
             }
 
-            selectionCells.push(elem);
-            elem.classList.add('selecting');
+            selectionCells.push(el);
+            el.classList.add('selecting');
+            if (selectionCells.length > 4) {
+                const removed = selectionCells.splice(4);
+                removed.forEach(cell => cell.classList.remove('selecting'));
+            }
+        }
+
+        function onGridPointerUp(e) {
+            if (!selecting || e.pointerId !== activePointerId) return;
+            e.preventDefault();
+            e.currentTarget?.releasePointerCapture?.(activePointerId);
+            evaluateSelection();
+            cleanupSelectionState();
+        }
+
+        function onGridPointerCancel(e) {
+            if (!selecting || e.pointerId !== activePointerId) return;
+            e.preventDefault();
+            e.currentTarget?.releasePointerCapture?.(activePointerId);
+            evaluateSelection();
+            cleanupSelectionState();
         }
 
         function evaluateSelection() {
-            if (selectionCells.length !== 4) {
+            if (inputLocked) return;
+            const n = selectionCells.length;
+            if (n !== 4) {
                 selectionCells.forEach(cell => {
-                    cell.classList.remove('selecting');
                     cell.classList.add('incorrect');
                 });
                 setTimeout(() => {
                     selectionCells.forEach(cell => cell.classList.remove('incorrect'));
-                }, 500);
-                selectionCells = [];
-                selectionDir = null;
+                }, 400);
                 return;
             }
 
@@ -627,40 +645,41 @@
             const reversed = letters.split('').reverse().join('');
             const isCorrect = letters === TARGET_WORD || reversed === TARGET_WORD;
 
-            selectionCells.forEach(cell => cell.classList.remove('selecting'));
-
             if (isCorrect) {
-                selectionCells.forEach(cell => cell.classList.add('correct'));
-                if (arcadeState.active && arcadeState.roundEndsAt) {
-                    endArcadeRound('success');
-                }
+                selectionCells.forEach(cell => {
+                    cell.classList.remove('selecting');
+                    cell.classList.add('correct');
+                });
+                endArcadeRound('success');
             } else {
                 selectionCells.forEach(cell => cell.classList.add('incorrect'));
                 setTimeout(() => {
                     selectionCells.forEach(cell => cell.classList.remove('incorrect'));
                 }, 500);
             }
-
-            selectionCells = [];
-            selectionDir = null;
         }
 
-        function endSelection(e) {
-            if (!selecting || e.pointerId !== activePointerId) return;
-            e.preventDefault();
-            evaluateSelection();
-            const gridElement = document.getElementById('gameGrid');
-            gridElement.releasePointerCapture(activePointerId);
-            activePointerId = null;
+        function cleanupSelectionState() {
             selecting = false;
+            activePointerId = null;
+            selectionDir = null;
+            selectionCells.forEach(cell => {
+                if (!cell.classList.contains('correct')) {
+                    cell.classList.remove('selecting');
+                }
+            });
+            selectionCells = [];
         }
 
-        const gridElement = document.getElementById('gameGrid');
-        gridElement.addEventListener('pointermove', handlePointerMove, {passive: false});
-        gridElement.addEventListener('pointerup', endSelection, {passive: false});
-        gridElement.addEventListener('pointercancel', endSelection, {passive: false});
-        gridElement.addEventListener('touchmove', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
-        gridElement.addEventListener('wheel', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
+        const gameGrid = document.getElementById('gameGrid');
+        gameGrid.addEventListener('pointerdown', onGridPointerDown, { passive: false });
+        gameGrid.addEventListener('pointermove', onGridPointerMove, { passive: false });
+        gameGrid.addEventListener('pointerup', onGridPointerUp, { passive: false });
+        gameGrid.addEventListener('pointercancel', onGridPointerCancel, { passive: false });
+        window.addEventListener('pointerup', onGridPointerUp, { passive: false });
+        window.addEventListener('pointercancel', onGridPointerCancel, { passive: false });
+        gameGrid.addEventListener('touchmove', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
+        gameGrid.addEventListener('wheel', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
 
         function renderMatchList(matches) {
             const matchListElement = document.getElementById('matchList');
@@ -778,6 +797,12 @@
         function startArcadeRound() {
             if (!arcadeState.active) return;
 
+            inputLocked = false;
+            document.querySelectorAll('.grid-cell').forEach(cell => {
+                cell.classList.remove('selecting', 'incorrect');
+            });
+            cleanupSelectionState();
+
             const size = Math.min(4 + arcadeState.level - 1, 20);
             const puzzle = generateGrid(size, 1, 1);
             arcadeState.currentPuzzle = puzzle;
@@ -806,6 +831,8 @@
         }
 
         function endArcadeRound(reason) {
+            inputLocked = true;
+            cleanupSelectionState();
             if (!arcadeState.roundEndsAt) return;
 
             if (arcadeState.timer) {
