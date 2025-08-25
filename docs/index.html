@@ -257,6 +257,14 @@
             margin-bottom: 20px;
         }
 
+        .arcade-toast {
+            text-align: center;
+            margin-top: 5px;
+            color: #ff6b6b;
+            font-size: 0.9em;
+            display: none;
+        }
+
         .arcade-timer {
             width: 100%;
             height: 10px;
@@ -362,6 +370,7 @@
             <div id="arcadeScore">Score: 0</div>
             <div id="arcadeLives">Lives: ❤❤❤</div>
         </div>
+        <div id="arcadeToast" class="arcade-toast"></div>
 
         <div class="grid-container">
             <div id="arcadeTimer" class="arcade-timer"><div id="arcadeTimerInner" class="arcade-timer-inner"></div></div>
@@ -401,6 +410,15 @@
             document.getElementById('arcadeLevel').textContent = `Level ${arcadeState.level}`;
             document.getElementById('arcadeScore').textContent = `Score: ${arcadeState.score}`;
             document.getElementById('arcadeLives').innerHTML = `Lives: ${'❤'.repeat(arcadeState.lives)}`;
+        }
+
+        function showArcadeToast(message) {
+            const toast = document.getElementById('arcadeToast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 1000);
         }
 
         function setCellSize(size){
@@ -965,11 +983,11 @@
                     arcadeState.roundEndsAt = null;
                     setTimeout(() => gameOver(), 300);
                     return;
-                } else {
-                    arcadeState.level += 1;
                 }
+                // Retry the same level without advancing
                 arcadeState.roundEndsAt = null;
                 updateArcadeHud();
+                showArcadeToast(`Try again — Level ${arcadeState.level}`);
                 setTimeout(() => {
                     if (arcadeState.active && arcadeState.lives > 0) {
                         startArcadeRound();
