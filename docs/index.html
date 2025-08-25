@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HowManyFucks - Web Demo</title>
     <style>
+        html, body {
+            overscroll-behavior: none;
+        }
+
         body {
             font-family: 'Courier New', monospace;
             max-width: 800px;
@@ -97,6 +101,7 @@
             background-color: #2a2a2a;
             padding: 15px;
             transition: background-color 0.3s;
+            touch-action: none;
         }
 
         .grid.flash {
@@ -105,6 +110,7 @@
         
         .grid-row {
             margin: 2px 0;
+            touch-action: none;
         }
         
         .grid-cell {
@@ -119,6 +125,7 @@
             font-weight: bold;
             font-size: 14px;
             border-radius: 3px;
+            touch-action: none;
         }
         
         .grid-cell.highlighted {
@@ -351,6 +358,7 @@
         let selecting = false;
         let selectionCells = [];
         let selectionDir = null;
+        let activePointerId = null;
 
         // Directions for word search
         const DIRECTIONS = {
@@ -549,8 +557,7 @@
                     cellElement.textContent = grid[row][col];
                     cellElement.dataset.row = row;
                     cellElement.dataset.col = col;
-                    cellElement.addEventListener('pointerdown', startSelection);
-                    cellElement.addEventListener('pointerenter', extendSelection);
+                    cellElement.addEventListener('pointerdown', startSelection, {passive: false});
 
                     const cellKey = `${row},${col}`;
                     if (highlightedCells.has(cellKey)) {
@@ -569,17 +576,22 @@
             selecting = true;
             selectionCells = [e.target];
             selectionDir = null;
+            activePointerId = e.pointerId;
+            const gridElement = document.getElementById('gameGrid');
+            gridElement.setPointerCapture(activePointerId);
             e.target.classList.add('selecting');
         }
 
-        function extendSelection(e) {
-            if (!selecting) return;
-            const cell = e.target;
-            if (!cell.classList.contains('grid-cell')) return;
-            if (selectionCells.includes(cell)) return;
+        function handlePointerMove(e) {
+            if (!selecting || e.pointerId !== activePointerId) return;
+            e.preventDefault();
+            const elem = document.elementFromPoint(e.clientX, e.clientY);
+            if (!elem || !elem.classList || !elem.classList.contains('grid-cell')) return;
+            if (selectionCells.includes(elem)) return;
+            if (selectionCells.length >= 4) return;
 
-            const r = parseInt(cell.dataset.row);
-            const c = parseInt(cell.dataset.col);
+            const r = parseInt(elem.dataset.row);
+            const c = parseInt(elem.dataset.col);
             const lastCell = selectionCells[selectionCells.length - 1];
             const lr = parseInt(lastCell.dataset.row);
             const lc = parseInt(lastCell.dataset.col);
@@ -593,26 +605,37 @@
                 if (!selectionDir || dr !== selectionDir.dr || dc !== selectionDir.dc) return;
             }
 
-            selectionCells.push(cell);
-            cell.classList.add('selecting');
+            selectionCells.push(elem);
+            elem.classList.add('selecting');
         }
 
-        function endSelection() {
-            if (!selecting) return;
-            selecting = false;
-            if (selectionCells.length === 0) return;
+        function evaluateSelection() {
+            if (selectionCells.length !== 4) {
+                selectionCells.forEach(cell => {
+                    cell.classList.remove('selecting');
+                    cell.classList.add('incorrect');
+                });
+                setTimeout(() => {
+                    selectionCells.forEach(cell => cell.classList.remove('incorrect'));
+                }, 500);
+                selectionCells = [];
+                selectionDir = null;
+                return;
+            }
 
             const letters = selectionCells.map(cell => cell.textContent).join('');
             const reversed = letters.split('').reverse().join('');
             const isCorrect = letters === TARGET_WORD || reversed === TARGET_WORD;
-            const finalClass = isCorrect ? 'correct' : 'incorrect';
 
-            selectionCells.forEach(cell => {
-                cell.classList.remove('selecting');
-                cell.classList.add(finalClass);
-            });
+            selectionCells.forEach(cell => cell.classList.remove('selecting'));
 
-            if (!isCorrect) {
+            if (isCorrect) {
+                selectionCells.forEach(cell => cell.classList.add('correct'));
+                if (arcadeState.active && arcadeState.roundEndsAt) {
+                    endArcadeRound('success');
+                }
+            } else {
+                selectionCells.forEach(cell => cell.classList.add('incorrect'));
                 setTimeout(() => {
                     selectionCells.forEach(cell => cell.classList.remove('incorrect'));
                 }, 500);
@@ -620,13 +643,24 @@
 
             selectionCells = [];
             selectionDir = null;
-
-            if (arcadeState.active && arcadeState.roundEndsAt) {
-                endArcadeRound(isCorrect ? 'success' : 'fail');
-            }
         }
 
-        document.addEventListener('pointerup', endSelection);
+        function endSelection(e) {
+            if (!selecting || e.pointerId !== activePointerId) return;
+            e.preventDefault();
+            evaluateSelection();
+            const gridElement = document.getElementById('gameGrid');
+            gridElement.releasePointerCapture(activePointerId);
+            activePointerId = null;
+            selecting = false;
+        }
+
+        const gridElement = document.getElementById('gameGrid');
+        gridElement.addEventListener('pointermove', handlePointerMove, {passive: false});
+        gridElement.addEventListener('pointerup', endSelection, {passive: false});
+        gridElement.addEventListener('pointercancel', endSelection, {passive: false});
+        gridElement.addEventListener('touchmove', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
+        gridElement.addEventListener('wheel', (e) => { if (arcadeState.active) e.preventDefault(); }, {passive: false});
 
         function renderMatchList(matches) {
             const matchListElement = document.getElementById('matchList');
