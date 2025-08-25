@@ -204,6 +204,35 @@
         .instructions li {
             margin: 8px 0;
         }
+
+        .arcade-hud {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .arcade-timer {
+            width: 100%;
+            height: 10px;
+            background-color: #555;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .arcade-timer-inner {
+            height: 100%;
+            width: 100%;
+            background-color: #ff6b6b;
+        }
+
+        .big-button {
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -257,10 +286,21 @@
                 <label>&nbsp;</label>
                 <button onclick="generateDailyPuzzle()">Daily Puzzle</button>
             </div>
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button onclick="startArcadeMode()">Arcade Mode</button>
+            </div>
         </div>
-        
+
+        <div id="arcadeHud" class="arcade-hud" style="display:none;">
+            <div id="arcadeLevel">Level 1</div>
+            <div id="arcadeScore">Score: 0</div>
+        </div>
+
         <div class="grid-container">
+            <div id="arcadeTimer" class="arcade-timer"><div id="arcadeTimerInner" class="arcade-timer-inner"></div></div>
             <div id="gameGrid" class="grid"></div>
+            <button id="noFucksButton" class="big-button">No Fucks Given</button>
         </div>
         
         <div class="game-section">
@@ -281,6 +321,7 @@
         // Game state
         let currentPuzzle = null;
         let revealed = false;
+        let arcadeState = { active: false, level: 1, score: 0, roundEndsAt: null, timer: null };
 
         // Selection state for interactive highlighting
         let selecting = false;
@@ -649,6 +690,29 @@
 
             document.getElementById('matchList').style.display = 'block';
             revealed = true;
+        }
+
+        function startArcadeMode() {
+            arcadeState.active = true;
+            arcadeState.level = 1;
+            arcadeState.score = 0;
+
+            document.getElementById('arcadeLevel').textContent = `Level ${arcadeState.level}`;
+            document.getElementById('arcadeScore').textContent = `Score: ${arcadeState.score}`;
+
+            document.querySelector('.controls').style.display = 'none';
+            document.querySelector('.game-section').style.display = 'none';
+            document.querySelector('.instructions').style.display = 'none';
+
+            document.getElementById('arcadeHud').style.display = 'block';
+            document.getElementById('arcadeTimer').style.display = 'block';
+            document.getElementById('noFucksButton').style.display = 'block';
+
+            startArcadeRound();
+        }
+
+        function startArcadeRound() {
+            // Placeholder for starting a new arcade round
         }
 
         // Initialize with a puzzle
